@@ -31,7 +31,7 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
   position, parents and an attribute reward. Two categories ship, `adventure` (7 nodes) and
   `gathering` (6 nodes); the whole tree is validated when it is first read (unknown parents,
   duplicate ids, a cost of 0 or an unknown modifier operation refuse it whole).
-- **Experience**, five sources, all from the tables in `data/tree.json`: killing a mob
+- **Experience**, six sources, all from the tables in `data/tree.json`: killing a mob
   (`mob_xp`, `minecraft:zombie` 6), breaking a block (`block_xp`, `minecraft:diamond_ore` 12),
   completing an advancement (`advancement_xp`, `minecraft:story/mine_stone` 25,
   `minecraft:end/kill_dragon` 300, 10 by default; the `advancement_muted` prefixes —
@@ -67,13 +67,16 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
 ## Missing / not done
 
 - **No automated in-game test.** The logic, the tree, the storage format and the message format
-  are unit-tested (`cargo test`), and the whole mod compiles against the real game sources, but
-  nobody has played a session with it: the window has not been seen on screen, and the attribute
-  command path has not been observed on a live server. This is the main gap.
+  are unit-tested (`cargo test`) and every hook signature was checked against the generated mod
+  API, but nobody has played a session with it: the window has not been seen on screen, and the
+  attribute command path has not been observed on a live server. This is the main gap.
+- **No captured build result yet**: the verification build (tests, dedicated-server engine,
+  client flavour, `cargo horizon-mod check`) is queued on the shared build host behind other
+  mods' builds; no run of it had finished when the verification session ended.
 - **No XP for smelting or play time**: Horizon's `furnace_smelt` hook names the furnace and not
   the player who loaded it, and there is no per-minute hook (`player_tick` runs 20 times a
   second and would need a timer of the mod's own). Everything else a player does with their
-  hands — kill, mine, advance, craft, fish, breed — earns.
+  hands — kill, mine,  advance, craft, fish, breed — earns. That makes six sources in all.
 - **No cap on a farmed source**: a player who crafts 1 000 cheap items earns 1 000 experience.
   Crafted experience is per take of the grid, so a full stack counts once, but an item farm is
   still worth more than a fight. If that matters, tune `craft_xp`'s `default` down.
