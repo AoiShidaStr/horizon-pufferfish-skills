@@ -88,7 +88,7 @@ impl Hooks for Skills {
         self.server.mob_killed(host, event.player, event.kind);
     }
 
-    fn destroy_block(&self, host: &mut dyn Host, event: &mut DestroyBlockEvent<'_>) -> Flow {
+    fn destroy_block(&self, host: &mut dyn Host, event: &mut DestroyBlockEvent) -> Flow {
         self.server.block_broken(host, event.pos);
         Flow::Continue
     }
