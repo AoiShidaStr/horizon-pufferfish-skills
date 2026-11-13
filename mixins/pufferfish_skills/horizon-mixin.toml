@@ -1,0 +1,15 @@
+# pufferfish_skills: a native (trait) mod — a permanent skill tree with XP-earned
+# points, attribute rewards and a GUI.
+#
+# The mod is one `[api]` package linked into a game the launcher builds; it hooks
+# Horizon's named hook points (native-hooks.json), so it needs hook points
+# version 415 and no mixin. See docs/native-mods.md, "Trait mods (draft)".
+[mod]
+id = "pufferfish_skills"
+version = "0.1.0"
+
+[compatibility]
+horizon_revision = "a85af177a82504f357ff10d5d40d0b7230e2ac32"
+
+[api]
+path = "api"

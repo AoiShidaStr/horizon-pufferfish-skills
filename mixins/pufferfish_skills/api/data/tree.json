@@ -1,0 +1,203 @@
+{
+  "mob_xp": {
+    "minecraft:zombie": 6,
+    "minecraft:husk": 6,
+    "minecraft:drowned": 7,
+    "minecraft:skeleton": 6,
+    "minecraft:stray": 7,
+    "minecraft:spider": 6,
+    "minecraft:cave_spider": 7,
+    "minecraft:creeper": 8,
+    "minecraft:enderman": 20,
+    "minecraft:blaze": 20,
+    "minecraft:wither_skeleton": 20,
+    "minecraft:piglin_brute": 20,
+    "minecraft:witch": 15,
+    "minecraft:pig": 3,
+    "minecraft:cow": 3,
+    "minecraft:sheep": 3,
+    "minecraft:chicken": 2,
+    "minecraft:default": 5
+  },
+  "block_xp": {
+    "minecraft:coal_ore": 3,
+    "minecraft:deepslate_coal_ore": 3,
+    "minecraft:iron_ore": 4,
+    "minecraft:deepslate_iron_ore": 4,
+    "minecraft:copper_ore": 3,
+    "minecraft:deepslate_copper_ore": 3,
+    "minecraft:gold_ore": 6,
+    "minecraft:deepslate_gold_ore": 6,
+    "minecraft:redstone_ore": 5,
+    "minecraft:deepslate_redstone_ore": 5,
+    "minecraft:lapis_ore": 6,
+    "minecraft:deepslate_lapis_ore": 6,
+    "minecraft:diamond_ore": 12,
+    "minecraft:deepslate_diamond_ore": 12,
+    "minecraft:emerald_ore": 15,
+    "minecraft:deepslate_emerald_ore": 15,
+    "minecraft:ancient_debris": 25,
+    "minecraft:default": 0
+  },
+  "categories": [
+    {
+      "id": "adventure",
+      "name": "Adventure",
+      "icon": "minecraft:iron_sword",
+      "xp_per_point": 120,
+      "nodes": [
+        {
+          "id": "vitality_1",
+          "name": "Vitality I",
+          "description": "+2 max health",
+          "icon": "minecraft:golden_apple",
+          "cost": 1,
+          "x": 0,
+          "y": 1,
+          "parents": [],
+          "reward": { "attribute": "minecraft:max_health", "amount": 2.0, "operation": "add_value" }
+        },
+        {
+          "id": "vitality_2",
+          "name": "Vitality II",
+          "description": "+2 max health",
+          "icon": "minecraft:golden_apple",
+          "cost": 1,
+          "x": 1,
+          "y": 1,
+          "parents": ["vitality_1"],
+          "reward": { "attribute": "minecraft:max_health", "amount": 2.0, "operation": "add_value" }
+        },
+        {
+          "id": "vitality_3",
+          "name": "Vitality III",
+          "description": "+4 max health",
+          "icon": "minecraft:enchanted_golden_apple",
+          "cost": 2,
+          "x": 2,
+          "y": 1,
+          "parents": ["vitality_2"],
+          "reward": { "attribute": "minecraft:max_health", "amount": 4.0, "operation": "add_value" }
+        },
+        {
+          "id": "swiftness_1",
+          "name": "Swiftness I",
+          "description": "+10% walking speed",
+          "icon": "minecraft:rabbit_foot",
+          "cost": 1,
+          "x": 0,
+          "y": 0,
+          "parents": [],
+          "reward": { "attribute": "minecraft:movement_speed", "amount": 0.1, "operation": "add_multiplied_base" }
+        },
+        {
+          "id": "swiftness_2",
+          "name": "Swiftness II",
+          "description": "+10% walking speed",
+          "icon": "minecraft:rabbit_foot",
+          "cost": 1,
+          "x": 1,
+          "y": 0,
+          "parents": ["swiftness_1"],
+          "reward": { "attribute": "minecraft:movement_speed", "amount": 0.1, "operation": "add_multiplied_base" }
+        },
+        {
+          "id": "guard_1",
+          "name": "Guard I",
+          "description": "+2 armour",
+          "icon": "minecraft:iron_chestplate",
+          "cost": 1,
+          "x": 0,
+          "y": 2,
+          "parents": [],
+          "reward": { "attribute": "minecraft:armor", "amount": 2.0, "operation": "add_value" }
+        },
+        {
+          "id": "guard_2",
+          "name": "Guard II",
+          "description": "+3 armour",
+          "icon": "minecraft:diamond_chestplate",
+          "cost": 2,
+          "x": 1,
+          "y": 2,
+          "parents": ["guard_1"],
+          "reward": { "attribute": "minecraft:armor", "amount": 3.0, "operation": "add_value" }
+        }
+      ]
+    },
+    {
+      "id": "gathering",
+      "name": "Gathering",
+      "icon": "minecraft:iron_pickaxe",
+      "xp_per_point": 100,
+      "nodes": [
+        {
+          "id": "miner_1",
+          "name": "Miner I",
+          "description": "+15% block breaking speed",
+          "icon": "minecraft:wooden_pickaxe",
+          "cost": 1,
+          "x": 0,
+          "y": 0,
+          "parents": [],
+          "reward": { "attribute": "minecraft:block_break_speed", "amount": 0.15, "operation": "add_multiplied_base" }
+        },
+        {
+          "id": "miner_2",
+          "name": "Miner II",
+          "description": "+15% block breaking speed",
+          "icon": "minecraft:stone_pickaxe",
+          "cost": 1,
+          "x": 1,
+          "y": 0,
+          "parents": ["miner_1"],
+          "reward": { "attribute": "minecraft:block_break_speed", "amount": 0.15, "operation": "add_multiplied_base" }
+        },
+        {
+          "id": "miner_3",
+          "name": "Miner III",
+          "description": "+30% block breaking speed",
+          "icon": "minecraft:diamond_pickaxe",
+          "cost": 2,
+          "x": 2,
+          "y": 0,
+          "parents": ["miner_2"],
+          "reward": { "attribute": "minecraft:block_break_speed", "amount": 0.3, "operation": "add_multiplied_base" }
+        },
+        {
+          "id": "fortune_1",
+          "name": "Fortune I",
+          "description": "+1 luck",
+          "icon": "minecraft:emerald",
+          "cost": 2,
+          "x": 0,
+          "y": 1,
+          "parents": ["miner_1"],
+          "reward": { "attribute": "minecraft:luck", "amount": 1.0, "operation": "add_value" }
+        },
+        {
+          "id": "strength_1",
+          "name": "Strength I",
+          "description": "+1 attack damage",
+          "icon": "minecraft:stone_sword",
+          "cost": 1,
+          "x": 0,
+          "y": 2,
+          "parents": [],
+          "reward": { "attribute": "minecraft:attack_damage", "amount": 1.0, "operation": "add_value" }
+        },
+        {
+          "id": "strength_2",
+          "name": "Strength II",
+          "description": "+2 attack damage",
+          "icon": "minecraft:iron_sword",
+          "cost": 2,
+          "x": 1,
+          "y": 2,
+          "parents": ["strength_1"],
+          "reward": { "attribute": "minecraft:attack_damage", "amount": 2.0, "operation": "add_value" }
+        }
+      ]
+    }
+  ]
+}
