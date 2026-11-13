@@ -75,7 +75,7 @@ pub struct Category {
     pub nodes: Vec<Node>,
 }
 
-/// The whole tree: its categories and what killing and mining are worth.
+/// The whole tree: its categories and what the game's own deeds are worth.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Tree {
     pub categories: Vec<Category>,
@@ -83,6 +83,16 @@ pub struct Tree {
     pub mob_xp: Vec<(String, i64)>,
     /// Experience per broken block, `default` for the rest.
     pub block_xp: Vec<(String, i64)>,
+    /// Experience per completed advancement, `default` for the rest.
+    pub advancement_xp: Vec<(String, i64)>,
+    /// Advancement id prefixes worth nothing: the recipe unlocks are progress, not a deed.
+    pub advancement_muted: Vec<String>,
+    /// Experience per crafted recipe, `default` for the rest.
+    pub craft_xp: Vec<(String, i64)>,
+    /// Experience for a fish reeled in with a catch.
+    pub fish_xp: i64,
+    /// Experience for a baby bred by the player.
+    pub breed_xp: i64,
 }
 
 impl Tree {
@@ -92,6 +102,11 @@ impl Tree {
             categories: Vec::new(),
             mob_xp: Vec::new(),
             block_xp: Vec::new(),
+            advancement_xp: Vec::new(),
+            advancement_muted: Vec::new(),
+            craft_xp: Vec::new(),
+            fish_xp: 0,
+            breed_xp: 0,
         }
     }
 
@@ -115,6 +130,23 @@ impl Tree {
     /// What breaking `block` is worth.
     pub fn block_xp_for(&self, block: &str) -> i64 {
         lookup(&self.block_xp, block)
+    }
+
+    /// What completing `advancement` is worth; nothing at all for a muted prefix.
+    pub fn advancement_xp_for(&self, advancement: &str) -> i64 {
+        if self
+            .advancement_muted
+            .iter()
+            .any(|prefix| advancement.starts_with(prefix.as_str()))
+        {
+            return 0;
+        }
+        lookup(&self.advancement_xp, advancement)
+    }
+
+    /// What crafting `recipe` is worth.
+    pub fn craft_xp_for(&self, recipe: &str) -> i64 {
+        lookup(&self.craft_xp, recipe)
     }
 }
 
@@ -144,12 +176,50 @@ pub fn plain_id(text: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
 }
 
+/// One amount, 0 when it is not there.
+fn number(value: Option<&Value>, what: &str) -> Result<i64, String> {
+    let Some(value) = value else {
+        return Ok(0);
+    };
+    let xp = value
+        .as_i64()
+        .ok_or_else(|| format!("{what} is not a whole number"))?;
+    if xp < 0 {
+        return Err(format!("{what} is negative"));
+    }
+    Ok(xp)
+}
+
+/// A list of id prefixes, each a name like `minecraft:recipes/`.
+fn prefixes(value: Option<&Value>) -> Result<Vec<String>, String> {
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
+    let Value::Array(list) = value else {
+        return Err("advancement_muted is not a list".to_owned());
+    };
+    let mut out = Vec::new();
+    for entry in list {
+        let prefix = entry
+            .as_str()
+            .filter(|text| !text.is_empty())
+            .ok_or("advancement_muted has an entry that is not a name")?;
+        out.push(prefix.to_owned());
+    }
+    Ok(out)
+}
+
 /// Reads a tree. A malformed tree is refused whole, with what is wrong named: a node nobody can
 /// reach or a reward the attribute command would not take is a typo, not a node to skip.
 pub fn parse(text: &str) -> Result<Tree, String> {
     let root: Value = serde_json::from_str(text).map_err(|e| format!("not JSON: {e}"))?;
     let mob_xp = table(root.get("mob_xp"), "mob_xp")?;
     let block_xp = table(root.get("block_xp"), "block_xp")?;
+    let advancement_xp = table(root.get("advancement_xp"), "advancement_xp")?;
+    let advancement_muted = prefixes(root.get("advancement_muted"))?;
+    let craft_xp = table(root.get("craft_xp"), "craft_xp")?;
+    let fish_xp = number(root.get("fish_xp"), "fish_xp")?;
+    let breed_xp = number(root.get("breed_xp"), "breed_xp")?;
     let categories = root
         .get("categories")
         .and_then(Value::as_array)
@@ -169,11 +239,20 @@ pub fn parse(text: &str) -> Result<Tree, String> {
         categories: out,
         mob_xp,
         block_xp,
+        advancement_xp,
+        advancement_muted,
+        craft_xp,
+        fish_xp,
+        breed_xp,
     })
 }
 
+/// A table of amounts: a missing table is no source at all, and every row is a whole number.
 fn table(value: Option<&Value>, what: &str) -> Result<Vec<(String, i64)>, String> {
-    let Some(Value::Object(map)) = value else {
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
+    let Value::Object(map) = value else {
         return Err(format!("{what} is not an object"));
     };
     let mut out = Vec::new();
@@ -325,6 +404,31 @@ mod tests {
     }
 
     #[test]
+    fn every_source_has_its_value() {
+        let tree = parse(DEFAULT_TREE).expect("the shipped tree parses");
+        assert_eq!(tree.advancement_xp_for("minecraft:story/mine_stone"), 25);
+        assert_eq!(tree.advancement_xp_for("minecraft:story/no_such_deed"), 10);
+        // Recipe unlocks are progress, not a deed.
+        assert_eq!(tree.advancement_xp_for("minecraft:recipes/building_blocks/oak_planks"), 0);
+        assert_eq!(tree.craft_xp_for("minecraft:diamond_pickaxe"), 6);
+        assert_eq!(tree.craft_xp_for("minecraft:stick"), 1);
+        assert!(tree.fish_xp > 0);
+        assert!(tree.breed_xp > 0);
+    }
+
+    #[test]
+    fn a_missing_source_is_worth_nothing() {
+        let bare = r#"{"categories":[
+            {"id":"a","name":"A","icon":"minecraft:stone","xp_per_point":10,
+             "nodes":[{"id":"one","name":"One","icon":"minecraft:stone","cost":1}]}]}"#;
+        let tree = parse(bare).expect("a tree with no tables parses");
+        assert_eq!(tree.advancement_xp_for("minecraft:story/mine_stone"), 0);
+        assert_eq!(tree.craft_xp_for("minecraft:stick"), 0);
+        assert_eq!(tree.fish_xp, 0);
+        assert_eq!(tree.breed_xp, 0);
+    }
+
+    #[test]
     fn every_parent_exists() {
         let tree = parse(DEFAULT_TREE).unwrap();
         for category in &tree.categories {
@@ -355,6 +459,10 @@ mod tests {
              "nodes":[{"id":"one","name":"One","icon":"minecraft:stone","cost":1,
                        "reward":{"attribute":"max_health","amount":1,"operation":"nope"}}]}]}"#;
         assert!(parse(bad_op).is_err());
+        let bad_kind = r#"{"fish_xp":"lots","categories":[
+            {"id":"a","name":"A","icon":"minecraft:stone","xp_per_point":10,
+             "nodes":[{"id":"one","name":"One","icon":"minecraft:stone","cost":1}]}]}"#;
+        assert!(parse(bad_kind).is_err());
         let free = r#"{"mob_xp":{},"block_xp":{},"categories":[
             {"id":"a","name":"A","icon":"minecraft:stone","xp_per_point":10,
              "nodes":[{"id":"one","name":"One","icon":"minecraft:stone","cost":0}]}]}"#;

@@ -39,6 +39,39 @@
     "minecraft:ancient_debris": 25,
     "minecraft:default": 0
   },
+  "advancement_xp": {
+    "minecraft:story/mine_stone": 25,
+    "minecraft:story/smelt_iron": 25,
+    "minecraft:story/obtain_armor": 25,
+    "minecraft:story/shiny_gear": 40,
+    "minecraft:story/enter_the_nether": 60,
+    "minecraft:story/follow_ender_eye": 60,
+    "minecraft:story/enter_the_end": 100,
+    "minecraft:nether/obtain_blaze_rod": 60,
+    "minecraft:nether/find_fortress": 60,
+    "minecraft:nether/summon_wither": 200,
+    "minecraft:nether/create_beacon": 150,
+    "minecraft:end/kill_dragon": 300,
+    "minecraft:end/elytra": 200,
+    "minecraft:adventure/kill_a_mob": 40,
+    "minecraft:adventure/trade": 40,
+    "minecraft:husbandry/breed_an_animal": 25,
+    "minecraft:default": 10
+  },
+  "advancement_muted": ["minecraft:recipes/"],
+  "craft_xp": {
+    "minecraft:iron_pickaxe": 4,
+    "minecraft:iron_sword": 4,
+    "minecraft:iron_chestplate": 5,
+    "minecraft:diamond_pickaxe": 6,
+    "minecraft:diamond_sword": 6,
+    "minecraft:diamond_chestplate": 7,
+    "minecraft:golden_apple": 5,
+    "minecraft:bread": 2,
+    "minecraft:default": 1
+  },
+  "fish_xp": 8,
+  "breed_xp": 10,
   "categories": [
     {
       "id": "adventure",

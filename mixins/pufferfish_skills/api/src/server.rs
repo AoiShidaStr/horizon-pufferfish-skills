@@ -235,6 +235,38 @@ impl Server {
         self.gain(host, player.uuid, xp, &block);
     }
 
+    /// A player completed an advancement. Recipe unlocks are worth nothing (see
+    /// `advancement_muted` in `data/tree.json`): they are progress, not a deed.
+    pub fn advancement_done(&self, host: &mut dyn Host, uuid: u128, advancement: &str) {
+        let id = skill_tree::namespaced(advancement);
+        let xp = crate::tree().advancement_xp_for(&id);
+        self.gain(host, uuid, xp, &format!("advancement {id}"));
+    }
+
+    /// A player's fishing rod: state 2 is the reel-in of a bite, which gives the catch; 3 and 4
+    /// reel nothing in, and 0 and 1 are the cast and the bite.
+    pub fn fished(&self, host: &mut dyn Host, uuid: u128, state: i32) {
+        if state != 2 {
+            return;
+        }
+        let xp = crate::tree().fish_xp;
+        self.gain(host, uuid, xp, "fishing");
+    }
+
+    /// A player took a crafting grid's result.
+    pub fn crafted(&self, host: &mut dyn Host, uuid: u128, recipe: &str) {
+        let id = skill_tree::namespaced(recipe);
+        let xp = crate::tree().craft_xp_for(&id);
+        self.gain(host, uuid, xp, &id);
+    }
+
+    /// A player bred two animals (the hook names the feeder, 0 for none).
+    pub fn bred(&self, host: &mut dyn Host, uuid: u128, kind: &str) {
+        let xp = crate::tree().breed_xp;
+        let what = format!("breeding {}", skill_tree::namespaced(kind));
+        self.gain(host, uuid, xp, &what);
+    }
+
     /// The commands a server's players get: `/skillsadmin`, for whoever runs the server.
     pub fn register(&self, commands: &mut Vec<NativeCommand>) {
         for usage in [

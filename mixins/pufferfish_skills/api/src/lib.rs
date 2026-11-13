@@ -6,11 +6,12 @@
 //! The tree, the points, the rewards and the window are this mod's own, from the public
 //! description of how such a tree works.
 //!
-//! Hook points used (docs/native-mods.md, "Trait mods"): a player joining and leaving, killing and
-//! mining (`mob_killed`, `destroy_block`), the two halves' messages (`net_from_client`,
-//! `net_from_server`), a server's commands (`register_commands`, `perform_command`), the client's
-//! own (`commands`, `command`), the key (`key`, `mods`) and the tree's window (`screen_render_post`,
-//! `mouse_button_pre`).
+//! Hook points used (docs/native-mods.md, "Trait mods"): a player joining and leaving, killing,
+//! mining, an advancement, a catch, a craft and a breeding (`mob_killed`, `destroy_block`,
+//! `player_advancement_done`, `player_fish`, `item_crafted`, `baby_entity_spawn`), the two halves'
+//! messages (`net_from_client`, `net_from_server`), a server's commands (`register_commands`,
+//! `perform_command`), the client's own (`commands`, `command`), the key (`key`, `mods`) and the
+//! tree's window (`screen_render_post`, `mouse_button_pre`).
 #![forbid(unsafe_code)]
 
 use std::sync::LazyLock;
@@ -71,7 +72,7 @@ impl Hooks for Skills {
         self.server.logged_out(host, event.player);
     }
 
-    fn net_from_client(&self, host: &mut dyn Host, event: &mut NetFromClientEvent<'_>) {
+    fn net_from_client(&self, host: &mut dyn Host, event: &mut NetFromClientEvent) {
         self.server
             .message(host, event.player, event.channel, event.data);
     }
@@ -89,6 +90,33 @@ impl Hooks for Skills {
 
     fn destroy_block(&self, host: &mut dyn Host, event: &mut DestroyBlockEvent<'_>) -> Flow {
         self.server.block_broken(host, event.pos);
+        Flow::Continue
+    }
+
+    fn player_advancement_done(
+        &self,
+        host: &mut dyn Host,
+        event: &mut PlayerAdvancementDoneEvent<'_>,
+    ) {
+        self.server
+            .advancement_done(host, event.player, event.advancement);
+    }
+
+    fn player_fish(&self, host: &mut dyn Host, event: &mut PlayerFishEvent<'_>) -> Flow {
+        self.server.fished(host, event.player, event.state);
+        Flow::Continue
+    }
+
+    fn item_crafted(&self, host: &mut dyn Host, event: &mut ItemCraftedEvent<'_>) {
+        self.server.crafted(host, event.player, event.recipe);
+    }
+
+    fn baby_entity_spawn(
+        &self,
+        host: &mut dyn Host,
+        event: &mut BabyEntitySpawnEvent<'_>,
+    ) -> Flow {
+        self.server.bred(host, event.player, event.kind);
         Flow::Continue
     }
 
@@ -131,7 +159,7 @@ impl Hooks for Skills {
         self.client.render(host, event.batch, event.screen);
     }
 
-    fn mouse_button_pre(&self, host: &mut dyn Host, event: &mut MouseButtonPreEvent<'_>) -> Flow {
+    fn mouse_button_pre(&self, host: &mut dyn Host, event: &mut MouseButtonPreEvent) -> Flow {
         if self.client.mouse(host, event.button, event.pressed) {
             Flow::Cancel
         } else {
