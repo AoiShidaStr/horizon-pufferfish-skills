@@ -31,10 +31,16 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
   position, parents and an attribute reward. Two categories ship, `adventure` (7 nodes) and
   `gathering` (6 nodes); the whole tree is validated when it is first read (unknown parents,
   duplicate ids, a cost of 0 or an unknown modifier operation refuse it whole).
-- **Experience**: killing a mob and breaking a block, from the table in `data/tree.json`
-  (`minecraft:zombie` 6, `minecraft:diamond_ore` 12, a `default` row for anything else).
-  Every category earns the same experience and turns it into points at its own rate
-  (`xp_per_point`: 120 for `adventure`, 100 for `gathering`).
+- **Experience**, five sources, all from the tables in `data/tree.json`: killing a mob
+  (`mob_xp`, `minecraft:zombie` 6), breaking a block (`block_xp`, `minecraft:diamond_ore` 12),
+  completing an advancement (`advancement_xp`, `minecraft:story/mine_stone` 25,
+  `minecraft:end/kill_dragon` 300, 10 by default; the `advancement_muted` prefixes —
+  `minecraft:recipes/` — earn nothing, a recipe unlock is progress and not a deed), taking a
+  crafted recipe (`craft_xp`, 1 by default, a diamond tool or armour 6-7), the reel-in of a
+  bite (`fish_xp`, 8) and a baby bred by the player (`breed_xp`, 10). Every table has a
+  `default` row or is one flat number, so a server can retune a whole source in one edit. Every
+  category earns the same experience and turns it into points at its own rate (`xp_per_point`:
+  120 for `adventure`, 100 for `gathering`).
 - **Points and unlocks**, on the server: a node needs its parents unlocked and enough unspent
   points; unlocking spends the cost and gives the reward; a category reset refunds every point and
   takes the rewards back.
@@ -64,8 +70,13 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
   are unit-tested (`cargo test`), and the whole mod compiles against the real game sources, but
   nobody has played a session with it: the window has not been seen on screen, and the attribute
   command path has not been observed on a live server. This is the main gap.
-- **Experience sources are thin**: mob kills and ore/block breaks. No XP for advancement, play
-  time, crafting, smelting or fishing, and no way to hook another mod's events.
+- **No XP for smelting or play time**: Horizon's `furnace_smelt` hook names the furnace and not
+  the player who loaded it, and there is no per-minute hook (`player_tick` runs 20 times a
+  second and would need a timer of the mod's own). Everything else a player does with their
+  hands — kill, mine, advance, craft, fish, breed — earns.
+- **No cap on a farmed source**: a player who crafts 1 000 cheap items earns 1 000 experience.
+  Crafted experience is per take of the grid, so a full stack counts once, but an item farm is
+  still worth more than a fight. If that matters, tune `craft_xp`'s `default` down.
 - **The tree is not editable at runtime**: it lives in the bundle (`api/data/tree.json`) and needs
   a rebuild of the mod. Pufferfish's Skills reads its trees from a data pack and has an online
   editor; this has neither.
@@ -90,7 +101,7 @@ mods/pufferfish_skills/
     api/Cargo.toml                  the trait-mod package (depends on horizon-client only)
     api/data/tree.json              the shipped skill tree + XP tables
     api/src/lib.rs                  Hooks: the wiring
-    api/src/server.rs               experience, points, unlocks, rewards, commands
+    api/src/server.rs               experience (five sources), points, unlocks, rewards, commands
     api/src/client.rs               key, /skills, the window, its clicks, the server's state
     api/src/gui.rs                  the window's layout and drawing
     api/src/net.rs                  the two halves' messages
