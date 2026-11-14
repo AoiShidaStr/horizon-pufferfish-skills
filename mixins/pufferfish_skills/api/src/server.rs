@@ -20,6 +20,10 @@ use crate::{CHANNEL_STATE, MOD_ID};
 #[derive(Default)]
 pub struct Server {
     players: Mutex<BTreeMap<u128, PlayerState>>,
+    /// Attribute commands waiting for the next server tick. `/attribute` only runs outside a
+    /// player's hook (the game refuses `run_command` there), and a reward is given inside one:
+    /// a click in the tree, or an operator's `/skillsadmin`.
+    rewards: Mutex<Vec<String>>,
 }
 
 impl Server {
@@ -66,37 +70,57 @@ impl Server {
             .map(|player| player.name)
     }
 
+    /// Queues an attribute command for the next server tick.
+    fn queue(&self, line: String) {
+        if let Ok(mut lines) = self.rewards.lock() {
+            lines.push(line);
+        }
+    }
+
+    /// Runs the attribute commands queued since the last tick. `server_tick` is a server hook
+    /// where `run_command` works; the reward itself is given inside a player's hook, where the
+    /// game refuses one.
+    pub fn flush(&self, host: &mut dyn Host) {
+        let Ok(mut queue) = self.rewards.lock() else {
+            return;
+        };
+        if queue.is_empty() {
+            return;
+        }
+        let lines = std::mem::take(&mut *queue);
+        drop(queue);
+        for line in lines {
+            if !host.run_command(&line) {
+                eprintln!("pufferfish_skills: the game refused `{line}`");
+            }
+        }
+    }
+
     /// Adds the node's attribute modifier to the player, permanently (as `/attribute ... modifier
     /// add` does: it is saved with them, so a death, a respawn or a rejoin keeps it).
-    fn give_reward(host: &mut dyn Host, uuid: u128, node: &str, reward: &Reward) {
+    fn give_reward(&self, host: &mut dyn Host, uuid: u128, node: &str, reward: &Reward) {
         let Some(name) = Self::name_of(host, uuid) else {
             return;
         };
-        let line = format!(
+        self.queue(format!(
             "attribute {name} {} modifier add {}:{} {} {}",
             reward.attribute,
             MOD_ID,
             node,
             amount_text(reward.amount),
             reward.operation.command_name()
-        );
-        if !host.run_command(&line) {
-            eprintln!("pufferfish_skills: the game refused `{line}`");
-        }
+        ));
     }
 
     /// Takes the node's attribute modifier away again.
-    fn take_reward(host: &mut dyn Host, uuid: u128, node: &str, reward: &Reward) {
+    fn take_reward(&self, host: &mut dyn Host, uuid: u128, node: &str, reward: &Reward) {
         let Some(name) = Self::name_of(host, uuid) else {
             return;
         };
-        let line = format!(
+        self.queue(format!(
             "attribute {name} {} modifier remove {}:{}",
             reward.attribute, MOD_ID, node
-        );
-        if !host.run_command(&line) {
-            eprintln!("pufferfish_skills: the game refused `{line}`");
-        }
+        ));
     }
 
     /// Gives `amount` experience to `uuid`'s trees, saving and telling them what it earned.
@@ -184,7 +208,7 @@ impl Server {
                 match outcome {
                     Ok(reward) => {
                         if let Some(reward) = &reward {
-                            Self::give_reward(host, uuid, &node, reward);
+                            self.give_reward(host, uuid, &node, reward);
                         }
                         self.save(host, uuid);
                         let label = crate::tree()
@@ -208,7 +232,7 @@ impl Server {
                 };
                 for node in &removed {
                     if let Some(reward) = crate::tree().node(&category, node).and_then(|n| n.reward.clone()) {
-                        Self::take_reward(host, uuid, node, &reward);
+                        self.take_reward(host, uuid, node, &reward);
                     }
                 }
                 self.save(host, uuid);
@@ -349,7 +373,7 @@ unlock <player> <category> <skill>, reset <player> <category>, sync <player>, in
                         .spent += cost;
                 }
                 if let Some(reward) = &reward {
-                    Self::give_reward(host, uuid, skill, reward);
+                    self.give_reward(host, uuid, skill, reward);
                 }
                 self.save(host, uuid);
                 self.push(host, uuid, Some(format!("Unlocked {category}/{skill}")));
@@ -364,7 +388,7 @@ unlock <player> <category> <skill>, reset <player> <category>, sync <player>, in
                 };
                 for node in &removed {
                     if let Some(reward) = crate::tree().node(category, node).and_then(|n| n.reward.clone()) {
-                        Self::take_reward(host, uuid, node, &reward);
+                        self.take_reward(host, uuid, node, &reward);
                     }
                 }
                 self.save(host, uuid);
@@ -378,7 +402,7 @@ unlock <player> <category> <skill>, reset <player> <category>, sync <player>, in
                 for category in &crate::tree().categories {
                     for node in state.unlocked_nodes(category) {
                         if let Some(reward) = &node.reward {
-                            Self::give_reward(host, uuid, &node.id, reward);
+                            self.give_reward(host, uuid, &node.id, reward);
                             applied += 1;
                         }
                     }
@@ -425,6 +449,40 @@ fn amount_text(amount: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A server that keeps the command lines it is given, as the game's console would run them.
+    #[derive(Default)]
+    struct Recorder {
+        lines: Mutex<Vec<String>>,
+    }
+
+    impl Host for Recorder {
+        fn run_command(&mut self, line: &str) -> bool {
+            self.lines.lock().unwrap().push(line.to_owned());
+            true
+        }
+    }
+
+    #[test]
+    fn a_queued_reward_runs_at_the_next_tick_once() {
+        let server = Server::default();
+        let mut host = Recorder::default();
+        server.queue(
+            "attribute Alex minecraft:max_health modifier add pufferfish_skills:vitality_1 2 \
+             add_value"
+                .to_owned(),
+        );
+        server.queue(
+            "attribute Alex minecraft:armor modifier add pufferfish_skills:toughness 1 add_value"
+                .to_owned(),
+        );
+        server.flush(&mut host);
+        server.flush(&mut host);
+        let lines = host.lines.lock().unwrap();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].starts_with("attribute Alex minecraft:max_health modifier add"));
+        assert!(lines[1].starts_with("attribute Alex minecraft:armor modifier add"));
+    }
 
     #[test]
     fn amounts_are_plain_numbers() {

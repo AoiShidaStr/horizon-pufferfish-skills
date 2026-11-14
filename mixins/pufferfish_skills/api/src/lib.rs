@@ -77,6 +77,14 @@ impl Hooks for Skills {
             .message(host, event.player, event.channel, event.data);
     }
 
+    /// Runs the attribute commands a click or a command queued: the game lets a mod run a
+    /// command here, on the server's tick, and not inside a player's hook.
+    fn server_tick(&self, host: &mut dyn Host, event: &mut ServerTickEvent<'_>) {
+        if matches!(event.phase, ServerTickPhase::ServerTickStart { .. }) {
+            self.server.flush(host);
+        }
+    }
+
     fn net_from_server(&self, host: &mut dyn Host, event: &mut NetFromServerEvent<'_>) {
         let _ = host;
         if event.channel == CHANNEL_STATE {
