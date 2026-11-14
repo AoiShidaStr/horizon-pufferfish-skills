@@ -96,12 +96,8 @@ impl Server {
         }
     }
 
-    /// Adds the node's attribute modifier to the player, permanently (as `/attribute ... modifier
-    /// add` does: it is saved with them, so a death, a respawn or a rejoin keeps it).
-    fn give_reward(&self, host: &mut dyn Host, uuid: u128, node: &str, reward: &Reward) {
-        let Some(name) = Self::name_of(host, uuid) else {
-            return;
-        };
+    /// Queues the node's attribute modifier for `name`.
+    fn push_reward(&self, name: &str, node: &str, reward: &Reward) {
         self.queue(format!(
             "attribute {name} {} modifier add {}:{} {} {}",
             reward.attribute,
@@ -112,11 +108,14 @@ impl Server {
         ));
     }
 
+    /// Adds the node's attribute modifier to the player, `name` being how the attribute command
+    /// names them.
+    fn give_reward(&self, name: &str, node: &str, reward: &Reward) {
+        self.push_reward(name, node, reward);
+    }
+
     /// Takes the node's attribute modifier away again.
-    fn take_reward(&self, host: &mut dyn Host, uuid: u128, node: &str, reward: &Reward) {
-        let Some(name) = Self::name_of(host, uuid) else {
-            return;
-        };
+    fn take_reward(&self, name: &str, node: &str, reward: &Reward) {
         self.queue(format!(
             "attribute {name} {} modifier remove {}:{}",
             reward.attribute, MOD_ID, node
@@ -127,15 +126,19 @@ impl Server {
     /// adds are transient (the game does not save them with the player; its permanent-attribute
     /// helper is still an unnumbered hook point), so a login or a respawn gives them again from
     /// the progress the mod keeps itself.
-    pub fn reapply(&self, host: &mut dyn Host, uuid: u128) -> usize {
+    pub fn reapply(&self, host: &dyn Host, uuid: u128, name: Option<&str>) -> usize {
         let Some(state) = self.state(uuid) else {
+            return 0;
+        };
+        // A login names the player itself: the server may not list them yet while the hook runs.
+        let Some(name) = name.map(str::to_owned).or_else(|| Self::name_of(host, uuid)) else {
             return 0;
         };
         let mut applied = 0;
         for category in &crate::tree().categories {
             for node in state.unlocked_nodes(category) {
                 if let Some(reward) = &node.reward {
-                    self.give_reward(host, uuid, &node.id, reward);
+                    self.push_reward(&name, &node.id, reward);
                     applied += 1;
                 }
             }
@@ -185,12 +188,12 @@ impl Server {
         );
         host.tell(uuid, Text::literal(greeting));
         self.push(host, uuid, None);
-        self.reapply(host, uuid);
+        self.reapply(host, uuid, Some(name));
     }
 
     /// A player came back from death with a new body: give the rewards again, a tick late.
     pub fn respawned(&self, host: &mut dyn Host, uuid: u128) {
-        self.reapply(host, uuid);
+        self.reapply(host, uuid, None);
     }
 
     pub fn logged_out(&self, host: &mut dyn Host, uuid: u128) {
@@ -233,8 +236,10 @@ impl Server {
                 };
                 match outcome {
                     Ok(reward) => {
-                        if let Some(reward) = &reward {
-                            self.give_reward(host, uuid, &node, reward);
+                        if let Some(reward) = &reward
+                            && let Some(name) = Self::name_of(host, uuid)
+                        {
+                            self.give_reward(&name, &node, reward);
                         }
                         self.save(host, uuid);
                         let label = crate::tree()
@@ -257,8 +262,10 @@ impl Server {
                     state.reset(crate::tree(), &category)
                 };
                 for node in &removed {
-                    if let Some(reward) = crate::tree().node(&category, node).and_then(|n| n.reward.clone()) {
-                        self.take_reward(host, uuid, node, &reward);
+                    if let Some(reward) = crate::tree().node(&category, node).and_then(|n| n.reward.clone())
+                        && let Some(name) = Self::name_of(host, uuid)
+                    {
+                        self.take_reward(&name, node, &reward);
                     }
                 }
                 self.save(host, uuid);
@@ -409,7 +416,7 @@ impl Server {
                         .spent += cost;
                 }
                 if let Some(reward) = &reward {
-                    self.give_reward(host, uuid, skill, reward);
+                    self.give_reward(*name, skill, reward);
                 }
                 self.save(host, uuid);
                 self.push(host, uuid, Some(format!("Unlocked {category}/{skill}")));
@@ -424,7 +431,7 @@ impl Server {
                 };
                 for node in &removed {
                     if let Some(reward) = crate::tree().node(category, node).and_then(|n| n.reward.clone()) {
-                        self.take_reward(host, uuid, node, &reward);
+                        self.take_reward(*name, node, &reward);
                     }
                 }
                 self.save(host, uuid);
@@ -433,7 +440,7 @@ impl Server {
             }
             ["skillsadmin", "sync", name] => {
                 let uuid = find(*name)?;
-                let applied = self.reapply(host, uuid);
+                let applied = self.reapply(host, uuid, Some(*name));
                 Some(format!("{name}: {applied} reward(s) re-applied"))
             }
             ["skillsadmin", "info"] => player.map(|player| self.describe(player.uuid)),
