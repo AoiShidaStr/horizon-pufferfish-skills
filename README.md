@@ -46,7 +46,10 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
   takes the rewards back.
 - **Rewards** are permanent attribute modifiers (`/attribute <player> <attribute> modifier add`),
   so they are saved with the player and survive death, respawn and rejoin: `max_health`, `armor`,
-  `movement_speed`, `attack_damage`, `block_break_speed`, `luck` in the shipped tree.
+  `movement_speed`, `attack_damage`, `block_break_speed`, `luck` in the shipped tree. The command
+  is queued and run on the server's tick (`server_tick`): the game refuses `run_command` inside a
+  player's hook, which is where a click and `/skillsadmin` arrive, so running it there would
+  silently give nothing.
 - **The window**: an in-game screen of the mod's own (Horizon's `native_mod_screen_open`), drawn
   with the screen hook — panel, category tabs, the tree's links, one box a node with its item
   icon, the hovered skill's name/description/cost, the points left, the server's last message.
@@ -58,7 +61,8 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
 - **Server commands** (`/skillsadmin`, operator level 2): `points add|set <player> <category>
   <amount>`, `unlock <player> <category> <skill>`, `reset <player> <category>`, `sync <player>`
   (re-applies the rewards of what is unlocked — for a player whose saved modifiers were lost),
-  `info [player]`.
+  `info [player]`. The same lines work on a dedicated server's console (`info` there needs a
+  player name).
 - **Client/server split**: the client only asks (`horizon:mod_net`, channel
   `pufferfish_skills:action`), the server checks every request against its own tree and its own
   copy of the player's progress, and answers with a snapshot
@@ -87,10 +91,10 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
   (no commands on unlock, no item or effect rewards, no repeatable nodes).
 - **No texture**: the window is deliberately drawn from rectangles and vanillas icons; it is
   functional, not pretty.
-- **Attributes are applied through the console command** because Horizon's direct per-player
+- **Attributes go through the console command, a tick late**, because Horizon's direct per-player
   attribute helpers (`@API:player_attributes@`, `@API:player_persistent_data@`) are still pending
-  hook points. When they are numbered, the mod should use them and drop the command round-trip
-  (and then a player's skill data can live in their player file instead of `config/`).
+  hook points. When they are numbered, the mod should use them and drop the queued command (and
+  then a player's skill data can live in their player file instead of `config/`).
 - **No registry publication**: not signed, not released, not listed (this is a private server's
   port).
 
@@ -111,8 +115,8 @@ mods/pufferfish_skills/
     api/src/state.rs                a player's progress and the rules
     api/src/skill_tree.rs           the tree model and its parser
     api/src/store.rs                config/pufferfish_skills/players/<uuid>.json
-  tools/pack.py                     packs dist/pufferfish_skills-<version>.hnmod
-  dist/                             build artefacts
+  tools/pack.py                     packs target/pufferfish_skills.{hnmod,hmod}
+  target/                           build artefacts
 ```
 
 ## Building and checking (VPS)
@@ -132,9 +136,10 @@ cargo build -p horizon-native-game --no-default-features   # the dedicated-serve
 cargo check -p horizon-native-game          # the client flavour
 ```
 
-`python tools/pack.py` writes `dist/pufferfish_skills-0.1.0.hnmod` (a zip of
-`horizon-native.json` and `mixins/pufferfish_skills/`), which is what a player or a server
-installs (`horizon-native-mods/`), built by the launcher on install.
+`python tools/pack.py` writes `target/pufferfish_skills.hnmod` and `target/pufferfish_skills.hmod`
+(the same zip of `horizon-native.json` and `mixins/pufferfish_skills/`; a `.hmod` holding native
+entries is a native mod too), which is what a player or a server installs
+(`horizon-native-mods/`), built by the launcher on install.
 
 ## Installing
 

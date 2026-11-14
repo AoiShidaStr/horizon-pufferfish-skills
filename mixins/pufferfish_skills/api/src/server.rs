@@ -311,10 +311,20 @@ impl Server {
         if words.first() != Some(&"skillsadmin") {
             return false;
         }
-        let usage = "usage: /skillsadmin points add|set <player> <category> <amount>, 
-unlock <player> <category> <skill>, reset <player> <category>, sync <player>, info [player]";
-        let reply = self.run(host, player, &words);
-        host.feedback(Text::literal(reply.unwrap_or_else(|| usage.replace('\n', " "))));
+        let reply = self.run(host, Some(player), &words);
+        host.feedback(Text::literal(reply.unwrap_or_else(usage_text)));
+        true
+    }
+
+    /// The same line typed on the dedicated server's console, where there is no player: `info`
+    /// needs one, the rest name the player they act on.
+    pub fn console_command(&self, host: &mut dyn Host, line: &str) -> bool {
+        let words: Vec<&str> = line.split_whitespace().collect();
+        if words.first() != Some(&"skillsadmin") {
+            return false;
+        }
+        let reply = self.run(host, None, &words);
+        host.feedback(Text::literal(reply.unwrap_or_else(usage_text)));
         true
     }
 
@@ -322,7 +332,7 @@ unlock <player> <category> <skill>, reset <player> <category>, sync <player>, in
     fn run(
         &self,
         host: &mut dyn Host,
-        player: &NativeServerPlayer,
+        player: Option<&NativeServerPlayer>,
         words: &[&str],
     ) -> Option<String> {
         let players = host.server_players();
@@ -409,7 +419,7 @@ unlock <player> <category> <skill>, reset <player> <category>, sync <player>, in
                 }
                 Some(format!("{name}: {applied} reward(s) re-applied"))
             }
-            ["skillsadmin", "info"] => Some(self.describe(player.uuid)),
+            ["skillsadmin", "info"] => player.map(|player| self.describe(player.uuid)),
             ["skillsadmin", "info", name] => {
                 let uuid = find(*name)?;
                 Some(self.describe(uuid))
@@ -433,7 +443,9 @@ unlock <player> <category> <skill>, reset <player> <category>, sync <player>, in
 }
 
 fn usage_text() -> String {
-    "usage: /skillsadmin points add|set <player> <category> <amount>".to_owned()
+    "usage: /skillsadmin points add|set <player> <category> <amount>; unlock <player> <category> \
+     <skill>; reset <player> <category>; sync <player>; info [player]"
+        .to_owned()
 }
 
 /// `2.0` written as `2`, `0.15` as `0.15`: what the attribute command parses.

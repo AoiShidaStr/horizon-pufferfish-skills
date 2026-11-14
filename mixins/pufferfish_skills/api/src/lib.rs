@@ -10,8 +10,9 @@
 //! mining, an advancement, a catch, a craft and a breeding (`mob_killed`, `destroy_block`,
 //! `player_advancement_done`, `player_fish`, `item_crafted`, `baby_entity_spawn`), the two halves'
 //! messages (`net_from_client`, `net_from_server`), a server's commands (`register_commands`,
-//! `perform_command`), the client's own (`commands`, `command`), the key (`key`, `mods`) and the
-//! tree's window (`screen_render_post`, `mouse_button_pre`).
+//! `perform_command`, `perform_console_command`), the client's own (`commands`, `command`), the
+//! key (`key`, `mods`), the tree's window (`screen_render_post`, `mouse_button_pre`) and the
+//! server's tick (`server_tick`), where the attribute commands a reward queues are run.
 #![forbid(unsafe_code)]
 
 use std::sync::LazyLock;
@@ -131,6 +132,19 @@ impl Hooks for Skills {
     fn register_commands(&self, host: &mut dyn Host, event: &mut RegisterCommandsEvent) {
         let _ = host;
         self.server.register(event.commands);
+    }
+
+    /// `/skillsadmin` typed on a dedicated server's console.
+    fn perform_console_command(
+        &self,
+        host: &mut dyn Host,
+        event: &mut PerformConsoleCommandEvent<'_>,
+    ) -> Flow {
+        if self.server.console_command(host, event.command) {
+            Flow::Cancel
+        } else {
+            Flow::Continue
+        }
     }
 
     fn perform_command(&self, host: &mut dyn Host, event: &mut PerformCommandEvent<'_>) -> Flow {
