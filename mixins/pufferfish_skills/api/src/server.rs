@@ -123,6 +123,26 @@ impl Server {
         ));
     }
 
+    /// Queues every unlocked reward `uuid` has, and says how many. The modifiers `/attribute`
+    /// adds are transient (the game does not save them with the player; its permanent-attribute
+    /// helper is still an unnumbered hook point), so a login or a respawn gives them again from
+    /// the progress the mod keeps itself.
+    pub fn reapply(&self, host: &mut dyn Host, uuid: u128) -> usize {
+        let Some(state) = self.state(uuid) else {
+            return 0;
+        };
+        let mut applied = 0;
+        for category in &crate::tree().categories {
+            for node in state.unlocked_nodes(category) {
+                if let Some(reward) = &node.reward {
+                    self.give_reward(host, uuid, &node.id, reward);
+                    applied += 1;
+                }
+            }
+        }
+        applied
+    }
+
     /// Gives `amount` experience to `uuid`'s trees, saving and telling them what it earned.
     fn gain(&self, host: &mut dyn Host, uuid: u128, amount: i64, what: &str) {
         if amount <= 0 {
@@ -165,6 +185,12 @@ impl Server {
         );
         host.tell(uuid, Text::literal(greeting));
         self.push(host, uuid, None);
+        self.reapply(host, uuid);
+    }
+
+    /// A player came back from death with a new body: give the rewards again, a tick late.
+    pub fn respawned(&self, host: &mut dyn Host, uuid: u128) {
+        self.reapply(host, uuid);
     }
 
     pub fn logged_out(&self, host: &mut dyn Host, uuid: u128) {
@@ -407,16 +433,7 @@ impl Server {
             }
             ["skillsadmin", "sync", name] => {
                 let uuid = find(*name)?;
-                let state = self.state(uuid)?;
-                let mut applied = 0;
-                for category in &crate::tree().categories {
-                    for node in state.unlocked_nodes(category) {
-                        if let Some(reward) = &node.reward {
-                            self.give_reward(host, uuid, &node.id, reward);
-                            applied += 1;
-                        }
-                    }
-                }
+                let applied = self.reapply(host, uuid);
                 Some(format!("{name}: {applied} reward(s) re-applied"))
             }
             ["skillsadmin", "info"] => player.map(|player| self.describe(player.uuid)),

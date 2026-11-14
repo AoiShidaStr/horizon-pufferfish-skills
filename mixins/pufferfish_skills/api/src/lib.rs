@@ -12,7 +12,8 @@
 //! messages (`net_from_client`, `net_from_server`), a server's commands (`register_commands`,
 //! `perform_command`, `perform_console_command`), the client's own (`commands`, `command`), the
 //! key (`key`, `mods`), the tree's window (`screen_render_post`, `mouse_button_pre`) and the
-//! server's tick (`server_tick`), where the attribute commands a reward queues are run.
+//! server's tick (`server_tick`), where the attribute commands a reward queues are run, and a
+//! respawn (`player_respawned`), which gives the rewards again.
 #![forbid(unsafe_code)]
 
 use std::sync::LazyLock;
@@ -71,6 +72,12 @@ impl Hooks for Skills {
 
     fn player_logged_out(&self, host: &mut dyn Host, event: &mut PlayerLoggedOutEvent) {
         self.server.logged_out(host, event.player);
+    }
+
+    /// A respawn is a new body: the attribute modifiers of `/attribute` are transient and do
+    /// not come back with it, so the unlocked rewards are given again.
+    fn player_respawned(&self, host: &mut dyn Host, event: &mut PlayerRespawnedEvent<'_>) {
+        self.server.respawned(host, event.player);
     }
 
     fn net_from_client(&self, host: &mut dyn Host, event: &mut NetFromClientEvent) {

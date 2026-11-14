@@ -44,12 +44,14 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
 - **Points and unlocks**, on the server: a node needs its parents unlocked and enough unspent
   points; unlocking spends the cost and gives the reward; a category reset refunds every point and
   takes the rewards back.
-- **Rewards** are permanent attribute modifiers (`/attribute <player> <attribute> modifier add`),
-  so they are saved with the player and survive death, respawn and rejoin: `max_health`, `armor`,
-  `movement_speed`, `attack_damage`, `block_break_speed`, `luck` in the shipped tree. The command
-  is queued and run on the server's tick (`server_tick`): the game refuses `run_command` inside a
-  player's hook, which is where a click and `/skillsadmin` arrive, so running it there would
-  silently give nothing.
+- **Rewards** are attribute modifiers (`/attribute <player> <attribute> modifier add`):
+  `max_health`, `armor`, `movement_speed`, `attack_damage`, `block_break_speed`, `luck` in the
+  shipped tree. The command is queued and run on the server's tick (`server_tick`): the game
+  refuses `run_command` inside a player's hook, which is where a click and `/skillsadmin` arrive,
+  so running it there would silently give nothing. Horizon's `/attribute` adds a *transient*
+  modifier and saves none with the player (its permanent-attribute helper is still an unnumbered
+  hook point), so the mod gives the unlocked rewards again on login and on respawn, from the
+  progress it saves itself: they survive a rejoin, a death and a server restart.
 - **The window**: an in-game screen of the mod's own (Horizon's `native_mod_screen_open`), drawn
   with the screen hook — panel, category tabs, the tree's links, one box a node with its item
   icon, the hovered skill's name/description/cost, the points left, the server's last message.
@@ -84,6 +86,10 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
 - **No cap on a farmed source**: a player who crafts 1 000 cheap items earns 1 000 experience.
   Crafted experience is per take of the grid, so a full stack counts once, but an item farm is
   still worth more than a fight. If that matters, tune `craft_xp`'s `default` down.
+- **No automated in-game test of the window or of a player earning experience**: the server
+  half has been run on a scratch dedicated server (a bot login, `/skillsadmin` from its console,
+  points, unlocks, the modifiers after a restart, a reset), but the window itself has still not
+  been seen on screen, and the kill/mine/craft/fish hooks have not been played.
 - **The tree is not editable at runtime**: it lives in the bundle (`api/data/tree.json`) and needs
   a rebuild of the mod. Pufferfish's Skills reads its trees from a data pack and has an online
   editor; this has neither.
