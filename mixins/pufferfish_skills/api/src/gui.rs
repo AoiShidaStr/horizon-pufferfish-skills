@@ -315,11 +315,14 @@ mod tests {
     }
 
     #[test]
-    fn an_unknown_category_draws_no_boxes() {
+    fn an_unknown_category_falls_back_to_the_last_one() {
         let tree = tree();
         let state = PlayerState::default();
         let last = layout([0.0, 0.0, 800.0, 600.0], &tree, &state, 9, [0.0, 0.0]);
-        assert!(last.nodes.is_empty());
         assert_eq!(last.category, tree.categories.len() - 1);
+        assert_eq!(
+            last.nodes.len(),
+            tree.categories.last().expect("a category").nodes.len()
+        );
     }
 }

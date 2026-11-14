@@ -263,7 +263,14 @@ fn table(value: Option<&Value>, what: &str) -> Result<Vec<(String, i64)>, String
         if xp < 0 {
             return Err(format!("{what}.{key} is negative"));
         }
-        out.push((key.clone(), xp));
+        // `minecraft:default` is the fallback row, as a mob kind would be namespaced; `lookup`
+        // asks for `default`.
+        let key = if key == "minecraft:default" {
+            "default".to_owned()
+        } else {
+            key.clone()
+        };
+        out.push((key, xp));
     }
     Ok(out)
 }
