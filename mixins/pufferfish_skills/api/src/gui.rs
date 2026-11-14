@@ -297,11 +297,11 @@ mod tests {
     fn the_panel_is_centered_and_boxes_are_hit() {
         let tree = tree();
         let state = PlayerState::default();
-        let layout = layout([0.0, 0.0, 854.0, 480.0], &tree, &state, 0, [0.0, 0.0]);
-        assert_eq!(layout.panel[0], (854.0 - PANEL_W) / 2.0);
-        assert_eq!(layout.panel[1], (480.0 - PANEL_H) / 2.0);
-        assert_eq!(layout.tabs.len(), tree.categories.len());
-        let (rect, index) = layout.nodes[0];
+        let first = layout([0.0, 0.0, 854.0, 480.0], &tree, &state, 0, [0.0, 0.0]);
+        assert_eq!(first.panel[0], (854.0 - PANEL_W) / 2.0);
+        assert_eq!(first.panel[1], (480.0 - PANEL_H) / 2.0);
+        assert_eq!(first.tabs.len(), tree.categories.len());
+        let (rect, index) = first.nodes[0];
         assert_eq!(index, 0);
         let inside = [rect[0] + 2.0, rect[1] + 2.0];
         let hit = layout([0.0, 0.0, 854.0, 480.0], &tree, &state, 0, inside);
@@ -309,7 +309,7 @@ mod tests {
         assert_eq!(hit.node_at(inside), Some(0));
         assert_eq!(hit.node_at([0.0, 0.0]), None);
         // The first tab picks the first category.
-        let tab = layout.tabs[0].0;
+        let tab = first.tabs[0].0;
         assert_eq!(hit.tab_at([tab[0] + 1.0, tab[1] + 1.0]), Some(0));
         assert!(hit.close_at([hit.close[0] + 1.0, hit.close[1] + 1.0]));
     }
@@ -318,8 +318,8 @@ mod tests {
     fn an_unknown_category_draws_no_boxes() {
         let tree = tree();
         let state = PlayerState::default();
-        let layout = layout([0.0, 0.0, 800.0, 600.0], &tree, &state, 9, [0.0, 0.0]);
-        assert!(layout.nodes.is_empty());
-        assert_eq!(layout.category, tree.categories.len() - 1);
+        let last = layout([0.0, 0.0, 800.0, 600.0], &tree, &state, 9, [0.0, 0.0]);
+        assert!(last.nodes.is_empty());
+        assert_eq!(last.category, tree.categories.len() - 1);
     }
 }
