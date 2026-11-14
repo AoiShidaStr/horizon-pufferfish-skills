@@ -9,7 +9,7 @@ id = "pufferfish_skills"
 version = "0.1.0"
 
 [compatibility]
-horizon_revision = "a85af177a82504f357ff10d5d40d0b7230e2ac32"
+horizon_revision = "9f42064c11efe7ef3e5ed2baad7ddc2a3b36eea0"
 
 [api]
 path = "api"

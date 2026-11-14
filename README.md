@@ -7,7 +7,7 @@ of its own (`K` by default, rebindable in Options > Mods, or `/skills`).
 - Mod id: `pufferfish_skills`
 - Kind: **native mod** (`.hnmod`, a trait mod — no content mod, no mixin)
 - Side: **both** — one bundle, the server half and the client half of the same package
-- Built against Horizon commit `a85af177a82504f357ff10d5d40d0b7230e2ac32` (hook points 415)
+- Built against Horizon commit `9f42064c11efe7ef3e5ed2baad7ddc2a3b36eea0` (hook points 415)
 
 ## Why a clean-room rewrite
 
@@ -69,16 +69,17 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
   `pufferfish_skills:action`), the server checks every request against its own tree and its own
   copy of the player's progress, and answers with a snapshot
   (`pufferfish_skills:state`).
+- **Build verification (2026-11-14)**: `cargo test -p mod-pufferfish_skills` (25 tests),
+  `cargo build -p horizon-native-game --no-default-features`, `cargo check -p horizon-native-game`
+  and `cargo-horizon-mod check` all pass against the pinned Horizon revision. Both installable
+  archives were rebuilt.
 
 ## Missing / not done
 
 - **No automated in-game test.** The logic, the tree, the storage format and the message format
-  are unit-tested (`cargo test`) and every hook signature was checked against the generated mod
-  API, but nobody has played a session with it: the window has not been seen on screen, and the
-  attribute command path has not been observed on a live server. This is the main gap.
-- **No captured build result yet**: the verification build (tests, dedicated-server engine,
-  client flavour, `cargo horizon-mod check`) is queued on the shared build host behind other
-  mods' builds; no run of it had finished when the verification session ended.
+  are unit-tested and every hook signature was checked against the generated mod API. The server
+  half was run on a scratch dedicated server, but nobody has viewed the window or played through
+  the XP hooks in a client session; this is the main gap.
 - **No XP for smelting or play time**: Horizon's `furnace_smelt` hook names the furnace and not
   the player who loaded it, and there is no per-minute hook (`player_tick` runs 20 times a
   second and would need a timer of the mod's own). Everything else a player does with their
@@ -86,10 +87,6 @@ by Pufferfish; this is an unaffiliated reimplementation of the idea for a privat
 - **No cap on a farmed source**: a player who crafts 1 000 cheap items earns 1 000 experience.
   Crafted experience is per take of the grid, so a full stack counts once, but an item farm is
   still worth more than a fight. If that matters, tune `craft_xp`'s `default` down.
-- **No automated in-game test of the window or of a player earning experience**: the server
-  half has been run on a scratch dedicated server (a bot login, `/skillsadmin` from its console,
-  points, unlocks, the modifiers after a restart, a reset), but the window itself has still not
-  been seen on screen, and the kill/mine/craft/fish hooks have not been played.
 - **The tree is not editable at runtime**: it lives in the bundle (`api/data/tree.json`) and needs
   a rebuild of the mod. Pufferfish's Skills reads its trees from a data pack and has an online
   editor; this has neither.
